@@ -1,0 +1,48 @@
+# CODEOWNERS - Automatic PR review assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Each line is a file pattern followed by one or more code owners.
+# The last matching pattern takes precedence.
+#
+# These owners will be requested for review when someone opens a pull request
+# that modifies code matching the pattern.
+
+# Default owner for all files (fallback)
+* @twentyhq/core
+
+# Frontend
+packages/twenty-front/ @twentyhq/frontend
+packages/twenty-ui/ @twentyhq/frontend
+
+# Backend
+packages/twenty-server/ @twentyhq/backend
+
+# Shared libraries
+packages/twenty-shared/ @twentyhq/core
+packages/twenty-utils/ @twentyhq/core
+
+# Infrastructure & CI/CD
+.github/ @twentyhq/core
+packages/twenty-docker/ @twentyhq/core
+nx.json @twentyhq/core
+package.json @twentyhq/core
+tsconfig.base.json @twentyhq/core
+
+# Documentation
+packages/twenty-docs/ @twentyhq/core
+packages/twenty-website/ @twentyhq/core
+
+# SDK & Integrations
+packages/twenty-sdk/ @twentyhq/core
+packages/twenty-zapier/ @twentyhq/core
+packages/twenty-apps/ @twentyhq/core
+
+# ESLint rules
+packages/twenty-eslint-rules/ @twentyhq/core
+
+# Email templates
+packages/twenty-emails/ @twentyhq/core
+
+# Security-sensitive files
+.github/workflows/security.yaml @twentyhq/core
+packages/twenty-server/src/engine/core-modules/auth/ @twentyhq/backend
