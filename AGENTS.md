@@ -8,14 +8,14 @@ Twenty is an open-source CRM (Customer Relationship Management) platform built a
 
 ### Technology Stack
 
-| Layer    | Technology                                  |
-| -------- | ------------------------------------------- |
+| Layer | Technology |
+|-------|-----------|
 | Frontend | React 18, TypeScript, Recoil, Emotion, Vite |
-| Backend  | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
-| Caching  | Redis                                       |
-| Queue    | BullMQ                                      |
-| Testing  | Jest, Playwright, Storybook                 |
-| Monorepo | Nx workspace with Yarn 4                    |
+| Backend | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
+| Caching | Redis |
+| Queue | BullMQ |
+| Testing | Jest, Playwright, Storybook |
+| Monorepo | Nx workspace with Yarn 4 |
 
 ### Package Structure
 
@@ -70,13 +70,13 @@ export default UserCard;              // Use named export
 
 ### Naming Conventions
 
-| Element             | Convention                | Example                                |
-| ------------------- | ------------------------- | -------------------------------------- |
-| Variables/Functions | camelCase                 | `userAccountBalance`, `calculateTotal` |
-| Constants           | SCREAMING_SNAKE_CASE      | `API_ENDPOINTS`, `MAX_RETRY_COUNT`     |
-| Types/Classes       | PascalCase                | `UserService`, `ButtonProps`           |
-| Files/Directories   | kebab-case                | `user-profile.component.tsx`           |
-| Component Props     | PascalCase + Props suffix | `UserCardProps`                        |
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Variables/Functions | camelCase | `userAccountBalance`, `calculateTotal` |
+| Constants | SCREAMING_SNAKE_CASE | `API_ENDPOINTS`, `MAX_RETRY_COUNT` |
+| Types/Classes | PascalCase | `UserService`, `ButtonProps` |
+| Files/Directories | kebab-case | `user-profile.component.tsx` |
+| Component Props | PascalCase + Props suffix | `UserCardProps` |
 
 ### React Guidelines
 
@@ -356,95 +356,16 @@ const sanitizedInput = validateAndSanitize(userInput);
 const result = processData(sanitizedInput);
 ```
 
-## CI/CD Pipeline Overview
-
-The repository uses GitHub Actions with 24 workflows. Understanding CI is critical for ensuring PRs pass all checks.
-
-### Core CI Workflows
-
-| Workflow                   | Trigger    | What It Checks                                                                                                          |
-| -------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `ci-front.yaml`            | PR to main | ESLint, typecheck, Jest tests, Vite build, Storybook build + sharded tests, Playwright E2E                              |
-| `ci-server.yaml`           | PR to main | ESLint, typecheck, NestJS build, DB init, migration check, GraphQL generation, Jest unit + integration tests (8 shards) |
-| `ci-shared.yaml`           | PR to main | Lint, typecheck, tests for shared packages                                                                              |
-| `ci-breaking-changes.yaml` | PR to main | GraphQL schema + OpenAPI diff vs main, posts warnings as PR comments                                                    |
-| `security.yaml`            | PR to main | CodeQL analysis (JS/TS), dependency review (blocks high severity)                                                       |
-
-### Pre-commit Hooks (Husky + lint-staged)
-
-Every commit automatically runs:
-
-```bash
-# On *.{ts,tsx,js,jsx} files:
-eslint --fix && prettier --write
-
-# On *.{json,md,mdx,yml,yaml} files:
-prettier --write
-```
-
-### ESLint Architecture
-
-The project uses ESLint 9 flat config with per-package configs:
-
-```
-eslint.config.mjs                              # Root: shared rules for all packages
-├── packages/twenty-eslint-rules/
-│   ├── eslint.config.react.mjs                # Shared React config (extends root)
-│   └── rules/                                 # 16 custom rules
-├── packages/twenty-front/eslint.config.mjs    # Frontend (extends React config)
-├── packages/twenty-server/eslint.config.mjs   # Backend (stricter: no-explicit-any: error)
-├── packages/twenty-ui/eslint.config.mjs       # UI library
-└── ... (10 more per-package configs)
-```
-
-### Custom ESLint Rules
-
-Located in `packages/twenty-eslint-rules/rules/`:
-
-| Rule                                     | Enforces                                | Critical? |
-| ---------------------------------------- | --------------------------------------- | --------- |
-| `graphql-resolvers-should-be-guarded`    | Auth guards on all GraphQL resolvers    | Security  |
-| `rest-api-methods-should-be-guarded`     | Auth guards on all REST endpoints       | Security  |
-| `component-props-naming`                 | Props type naming convention            | Style     |
-| `no-hardcoded-colors`                    | Theme color usage                       | Style     |
-| `sort-css-properties-alphabetically`     | CSS property ordering                   | Style     |
-| `styled-components-prefixed-with-styled` | Styled component naming                 | Style     |
-| `matching-state-variable`                | State variable naming matches atom name | Pattern   |
-| `explicit-boolean-predicates-in-if`      | Explicit boolean checks                 | Quality   |
-| `max-consts-per-file`                    | Limit constants per file                | Quality   |
-| `no-navigate-prefer-link`                | Prefer Link component over navigate     | Pattern   |
-| `no-state-useref`                        | No useState for ref-like patterns       | Pattern   |
-
-### Code Quality Automation
-
-| Tool                  | Purpose                                            | Configuration                         |
-| --------------------- | -------------------------------------------------- | ------------------------------------- |
-| **DangerJS**          | PR automation (lock file sync, CLA, TODO scanning) | `packages/twenty-utils/dangerfile.ts` |
-| **GraphQL Inspector** | Schema breaking change detection                   | `ci-breaking-changes.yaml`            |
-| **OpenAPI Diff**      | REST API breaking change detection                 | `ci-breaking-changes.yaml`            |
-| **Chromatic**         | Visual regression for Storybook                    | `ci-front.yaml`                       |
-| **Prettier**          | Code formatting                                    | `package.json` (inline config)        |
-| **EditorConfig**      | Editor settings consistency                        | `.editorconfig`                       |
-
-### PR Review Automation
-
-- **CODEOWNERS** (`.github/CODEOWNERS`): Automatic reviewer assignment based on file paths
-- **PR Template** (`.github/pull_request_template.md`): Structured PR description with checklists
-
 ## Important Files
 
-| File                 | Purpose                                                                |
-| -------------------- | ---------------------------------------------------------------------- |
-| `nx.json`            | Nx workspace configuration and task definitions                        |
-| `tsconfig.base.json` | Base TypeScript configuration                                          |
-| `eslint.config.mjs`  | Root ESLint configuration (flat config, ESLint 9)                      |
-| `package.json`       | Root package with workspace definitions, Prettier + lint-staged config |
-| `.editorconfig`      | Editor settings for consistent formatting                              |
-| `.prettierignore`    | Root Prettier ignore patterns                                          |
-| `.github/CODEOWNERS` | Automatic PR reviewer assignment                                       |
-| `.github/workflows/` | 24 CI/CD workflow files                                                |
-| `.cursor/rules/`     | Development guidelines and rules                                       |
-| `CLAUDE.md`          | Claude Code specific instructions                                      |
+| File | Purpose |
+|------|---------|
+| `nx.json` | Nx workspace configuration and task definitions |
+| `tsconfig.base.json` | Base TypeScript configuration |
+| `eslint.config.mjs` | ESLint configuration (flat config) |
+| `package.json` | Root package with workspace definitions |
+| `.cursor/rules/` | Development guidelines and rules |
+| `CLAUDE.md` | Claude Code specific instructions |
 
 ## Getting Help
 
