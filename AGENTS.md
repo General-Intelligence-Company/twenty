@@ -8,14 +8,14 @@ Twenty is an open-source CRM (Customer Relationship Management) platform built a
 
 ### Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
+| Layer    | Technology                                  |
+| -------- | ------------------------------------------- |
 | Frontend | React 18, TypeScript, Recoil, Emotion, Vite |
-| Backend | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
-| Caching | Redis |
-| Queue | BullMQ |
-| Testing | Jest, Playwright, Storybook |
-| Monorepo | Nx workspace with Yarn 4 |
+| Backend  | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
+| Caching  | Redis                                       |
+| Queue    | BullMQ                                      |
+| Testing  | Jest, Playwright, Storybook                 |
+| Monorepo | Nx workspace with Yarn 4                    |
 
 ### Package Structure
 
@@ -70,13 +70,13 @@ export default UserCard;              // Use named export
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| Variables/Functions | camelCase | `userAccountBalance`, `calculateTotal` |
-| Constants | SCREAMING_SNAKE_CASE | `API_ENDPOINTS`, `MAX_RETRY_COUNT` |
-| Types/Classes | PascalCase | `UserService`, `ButtonProps` |
-| Files/Directories | kebab-case | `user-profile.component.tsx` |
-| Component Props | PascalCase + Props suffix | `UserCardProps` |
+| Element             | Convention                | Example                                |
+| ------------------- | ------------------------- | -------------------------------------- |
+| Variables/Functions | camelCase                 | `userAccountBalance`, `calculateTotal` |
+| Constants           | SCREAMING_SNAKE_CASE      | `API_ENDPOINTS`, `MAX_RETRY_COUNT`     |
+| Types/Classes       | PascalCase                | `UserService`, `ButtonProps`           |
+| Files/Directories   | kebab-case                | `user-profile.component.tsx`           |
+| Component Props     | PascalCase + Props suffix | `UserCardProps`                        |
 
 ### React Guidelines
 
@@ -356,16 +356,108 @@ const sanitizedInput = validateAndSanitize(userInput);
 const result = processData(sanitizedInput);
 ```
 
+## AI Code Review Checklist
+
+When reviewing or generating code, verify every item before considering the task complete:
+
+### Correctness
+
+- [ ] Code compiles without TypeScript errors (`npx nx typecheck <package>`)
+- [ ] ESLint passes without warnings or errors (`npx nx lint:diff-with-main <package>`)
+- [ ] Prettier formatting is correct (`npx nx fmt <package>`)
+- [ ] All existing tests still pass (`npx nx test <package>`)
+- [ ] New functionality has corresponding tests
+
+### Style Compliance
+
+- [ ] Named exports only (no `export default`)
+- [ ] Types used instead of interfaces (unless extending third-party)
+- [ ] String literals used instead of enums (unless GraphQL)
+- [ ] No `any` type - use `unknown` with type guards
+- [ ] Functional components only (no class components)
+- [ ] Event handlers preferred over `useEffect` for state updates
+- [ ] Imports organized: external -> internal (@/) -> relative (./)
+- [ ] Consistent type imports (`import { type Foo }` inline style)
+
+### Security Review
+
+- [ ] No hardcoded secrets, API keys, or credentials in code
+- [ ] User input is validated and sanitized before use
+- [ ] SQL/GraphQL queries use parameterized inputs (no string interpolation)
+- [ ] CSV/export outputs use `sanitizeValueForCSVExport` before `formatValueForCSV`
+- [ ] Authentication/authorization checks present on new API endpoints
+- [ ] No sensitive data logged to console or error messages
+- [ ] File uploads validated for type and size
+- [ ] CORS configuration not weakened
+
+### Performance Considerations
+
+- [ ] No unnecessary re-renders (check Recoil selector dependencies)
+- [ ] Large lists use virtualization where appropriate
+- [ ] Database queries include proper indexes and avoid N+1 patterns
+- [ ] GraphQL queries request only needed fields (no over-fetching)
+- [ ] Expensive computations memoized with `useMemo`/`useCallback`
+- [ ] Background jobs used for long-running operations (BullMQ)
+- [ ] Redis caching used for frequently accessed, rarely changed data
+
+### Database & Migrations
+
+- [ ] Migration files are idempotent and reversible
+- [ ] Schema changes are backward compatible
+- [ ] New columns have sensible defaults or are nullable
+- [ ] Indexes added for columns used in WHERE/JOIN/ORDER BY
+- [ ] Migration tested with `npx nx run twenty-server:database:migrate:prod`
+
+### GraphQL
+
+- [ ] Schema changes are backward compatible (no breaking removals)
+- [ ] New types/fields regenerated with `npx nx run twenty-front:graphql:generate`
+- [ ] Resolvers have proper authorization guards
+- [ ] Input validation present on mutations
+
+## CI/CD Pipeline Overview
+
+The repository has comprehensive CI/CD with 25+ GitHub Actions workflows. Key pipelines:
+
+| Workflow                      | Triggers                 | Checks                                                                          |
+| ----------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `ci-front.yaml`               | PR, merge_group          | Lint, typecheck, test, Storybook build/test, E2E, Chromatic                     |
+| `ci-server.yaml`              | PR, merge_group          | Lint, typecheck, build, unit test, integration test (8 shards), migration check |
+| `ci-shared.yaml`              | PR, merge_group          | Lint, typecheck, test                                                           |
+| `ci-sdk.yaml`                 | PR, merge_group          | Lint, typecheck, unit test                                                      |
+| `ci-format.yaml`              | PR, merge_group          | Prettier format check (frontend, backend, shared)                               |
+| `ci-breaking-changes.yaml`    | PR to main               | GraphQL + OpenAPI breaking changes detection                                    |
+| `security.yaml`               | PR, push to main, weekly | CodeQL analysis, dependency review                                              |
+| `ci-docs.yaml`                | PR, push to main         | MDX linting with ESLint                                                         |
+| `ci-emails.yaml`              | PR, push to main         | Email template build and test                                                   |
+| `ci-create-app.yaml`          | PR, push to main         | Lint, typecheck, test                                                           |
+| `ci-test-docker-compose.yaml` | PR, merge_group          | Docker Compose integration test                                                 |
+
+### Pre-commit Hooks
+
+Husky runs `lint-staged` on every commit:
+
+- `*.{ts,tsx,js,jsx}` -> `eslint --fix` then `prettier --write`
+- `*.{json,md,mdx,yml,yaml}` -> `prettier --write`
+
+### Required Checks Before Merging
+
+All PRs must pass lint, typecheck, and test for affected packages. The CI uses `nx affected` to only run checks on packages impacted by changes.
+
 ## Important Files
 
-| File | Purpose |
-|------|---------|
-| `nx.json` | Nx workspace configuration and task definitions |
-| `tsconfig.base.json` | Base TypeScript configuration |
-| `eslint.config.mjs` | ESLint configuration (flat config) |
-| `package.json` | Root package with workspace definitions |
-| `.cursor/rules/` | Development guidelines and rules |
-| `CLAUDE.md` | Claude Code specific instructions |
+| File                 | Purpose                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| `nx.json`            | Nx workspace configuration and task definitions                         |
+| `tsconfig.base.json` | Base TypeScript configuration                                           |
+| `eslint.config.mjs`  | ESLint configuration (flat config v9)                                   |
+| `package.json`       | Root package with workspace definitions and Prettier/lint-staged config |
+| `.husky/pre-commit`  | Git pre-commit hook (runs lint-staged)                                  |
+| `.github/workflows/` | 25+ CI/CD workflow files                                                |
+| `.github/actions/`   | Custom composite actions (yarn-install, nx-affected, cache)             |
+| `.cursor/rules/`     | Development guidelines and rules                                        |
+| `CLAUDE.md`          | Claude Code specific instructions                                       |
+| `AGENTS.md`          | This file - AI agent guidelines                                         |
 
 ## Getting Help
 
