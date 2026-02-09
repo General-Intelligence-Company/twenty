@@ -8,14 +8,14 @@ Twenty is an open-source CRM (Customer Relationship Management) platform built a
 
 ### Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
+| Layer    | Technology                                  |
+| -------- | ------------------------------------------- |
 | Frontend | React 18, TypeScript, Recoil, Emotion, Vite |
-| Backend | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
-| Caching | Redis |
-| Queue | BullMQ |
-| Testing | Jest, Playwright, Storybook |
-| Monorepo | Nx workspace with Yarn 4 |
+| Backend  | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
+| Caching  | Redis                                       |
+| Queue    | BullMQ                                      |
+| Testing  | Jest, Playwright, Storybook                 |
+| Monorepo | Nx workspace with Yarn 4                    |
 
 ### Package Structure
 
@@ -70,13 +70,13 @@ export default UserCard;              // Use named export
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| Variables/Functions | camelCase | `userAccountBalance`, `calculateTotal` |
-| Constants | SCREAMING_SNAKE_CASE | `API_ENDPOINTS`, `MAX_RETRY_COUNT` |
-| Types/Classes | PascalCase | `UserService`, `ButtonProps` |
-| Files/Directories | kebab-case | `user-profile.component.tsx` |
-| Component Props | PascalCase + Props suffix | `UserCardProps` |
+| Element             | Convention                | Example                                |
+| ------------------- | ------------------------- | -------------------------------------- |
+| Variables/Functions | camelCase                 | `userAccountBalance`, `calculateTotal` |
+| Constants           | SCREAMING_SNAKE_CASE      | `API_ENDPOINTS`, `MAX_RETRY_COUNT`     |
+| Types/Classes       | PascalCase                | `UserService`, `ButtonProps`           |
+| Files/Directories   | kebab-case                | `user-profile.component.tsx`           |
+| Component Props     | PascalCase + Props suffix | `UserCardProps`                        |
 
 ### React Guidelines
 
@@ -285,6 +285,105 @@ scope:shared    -> can use: scope:shared only
 scope:sdk       -> can use: scope:sdk, scope:shared
 ```
 
+## CI/CD Pipeline
+
+### Overview
+
+The repository has 24 GitHub Actions workflows covering CI, deployment, security, and automation. All CI workflows run on PRs and merge groups with concurrency controls.
+
+### CI Workflow Matrix
+
+| Workflow    | File              | Checks                                                                                                 | Runner               |
+| ----------- | ----------------- | ------------------------------------------------------------------------------------------------------ | -------------------- |
+| Frontend CI | `ci-front.yaml`   | lint, typecheck, test, build, Storybook build/test (4 shards), coverage, E2E                           | depot-ubuntu-24.04-8 |
+| Server CI   | `ci-server.yaml`  | lint, typecheck, build, unit tests, integration tests (8 shards), migration checks, GraphQL generation | depot-ubuntu-24.04-8 |
+| Shared CI   | `ci-shared.yaml`  | lint, typecheck, test                                                                                  | ubuntu-latest        |
+| SDK CI      | `ci-sdk.yaml`     | SDK package checks                                                                                     | ubuntu-latest        |
+| Emails CI   | `ci-emails.yaml`  | Email template checks                                                                                  | ubuntu-latest        |
+| Docs CI     | `ci-docs.yaml`    | Documentation checks                                                                                   | ubuntu-latest        |
+| Website CI  | `ci-website.yaml` | Website checks                                                                                         | ubuntu-latest        |
+| Utils CI    | `ci-utils.yaml`   | Danger.js PR analysis                                                                                  | ubuntu-latest        |
+| Security    | `security.yaml`   | CodeQL + dependency review                                                                             | ubuntu-latest        |
+
+### CI Services (Backend)
+
+Backend CI jobs spin up these services:
+
+- **PostgreSQL** (`twentycrm/twenty-postgres-spilo`) - Primary database
+- **Redis** - Caching and sessions
+- **ClickHouse** (`clickhouse/clickhouse-server:25.8.8`) - Analytics (integration tests only)
+
+### What CI Validates
+
+1. **Lint** - ESLint with flat config (ESLint 9), including 15+ custom rules
+2. **Type Check** - TypeScript via `tsgo` (native TypeScript compiler)
+3. **Unit Tests** - Jest for both frontend and backend
+4. **Integration Tests** - Backend tests with real PostgreSQL/Redis/ClickHouse (8 shards)
+5. **Storybook Tests** - Visual regression with coverage (4 shards × 3 scopes)
+6. **Build Verification** - Full production builds for frontend and backend
+7. **Migration Check** - Detects uncommitted TypeORM migration changes
+8. **GraphQL Schema Check** - Detects uncommitted GraphQL codegen changes
+9. **E2E Tests** - Playwright tests (requires `run-e2e` label on PRs)
+
+### Security Scanning
+
+- **CodeQL Analysis** - Runs on PRs, main branch pushes, and weekly (Sunday midnight)
+  - Scans `javascript-typescript` language
+  - Results appear in GitHub Security tab
+- **Dependency Review** - Runs on PRs, fails on `high` severity vulnerabilities
+  - Uses `actions/dependency-review-action@v4`
+  - `continue-on-error: true` (non-blocking until Dependency graph is enabled)
+
+### Custom GitHub Actions
+
+| Action          | Location                         | Purpose                                  |
+| --------------- | -------------------------------- | ---------------------------------------- |
+| `yarn-install`  | `.github/actions/yarn-install/`  | Cached Yarn 4 dependency installation    |
+| `nx-affected`   | `.github/actions/nx-affected/`   | Run Nx tasks on affected projects by tag |
+| `save-cache`    | `.github/actions/save-cache/`    | Save build artifacts to cache            |
+| `restore-cache` | `.github/actions/restore-cache/` | Restore cached build artifacts           |
+
+### Pre-commit Hooks
+
+The repository uses **Husky** + **lint-staged**:
+
+- **`.ts`, `.tsx`, `.js`, `.jsx`** files: `eslint --fix` then `prettier --write`
+- **`.json`, `.md`, `.mdx`, `.yml`, `.yaml`** files: `prettier --write`
+
+## Custom ESLint Rules
+
+The project maintains custom ESLint rules in `packages/twenty-eslint-rules/`:
+
+### Frontend Rules
+
+| Rule                                     | Purpose                                    |
+| ---------------------------------------- | ------------------------------------------ |
+| `component-props-naming`                 | Enforce component prop naming conventions  |
+| `effect-components`                      | Rules for effect components                |
+| `matching-state-variable`                | State variable naming consistency          |
+| `no-hardcoded-colors`                    | Prevent hardcoded color values (use theme) |
+| `styled-components-prefixed-with-styled` | Styled component naming                    |
+| `sort-css-properties-alphabetically`     | CSS property ordering                      |
+| `no-navigate-prefer-link`                | Prefer Link over navigate()                |
+| `no-state-useref`                        | Prevent state in useRef                    |
+| `useRecoilCallback-has-dependency-array` | Recoil callback deps                       |
+| `max-consts-per-file`                    | Limit constants per file                   |
+
+### Backend Rules
+
+| Rule                                  | Purpose                                   |
+| ------------------------------------- | ----------------------------------------- |
+| `inject-workspace-repository`         | Workspace repository injection pattern    |
+| `rest-api-methods-should-be-guarded`  | Ensure REST endpoints have auth guards    |
+| `graphql-resolvers-should-be-guarded` | Ensure GraphQL resolvers have auth guards |
+
+### Documentation Rules
+
+| Rule                            | Purpose                                   |
+| ------------------------------- | ----------------------------------------- |
+| `mdx-component-newlines`        | JSX tags on separate lines (i18n/Crowdin) |
+| `no-angle-bracket-placeholders` | No angle bracket placeholders in MDX      |
+
 ## PR Guidelines
 
 ### Before Submitting
@@ -294,6 +393,7 @@ scope:sdk       -> can use: scope:sdk, scope:shared
 3. Run relevant tests
 4. Ensure no console errors in browser
 5. Update documentation if API changes
+6. Regenerate GraphQL types if schema changed: `npx nx run twenty-front:graphql:generate`
 
 ### Commit Messages
 
@@ -312,9 +412,23 @@ docs: update API authentication guide
 - [ ] Code follows project style guidelines (ESLint, Prettier)
 - [ ] Self-review completed
 - [ ] Tests added/updated for new functionality
-- [ ] No TypeScript errors
+- [ ] No TypeScript errors (`npx nx typecheck <package>`)
+- [ ] No ESLint errors (`npx nx lint:diff-with-main <package>`)
 - [ ] GraphQL schema changes are backward compatible
+- [ ] GraphQL types regenerated if schema changed
 - [ ] Database migrations are properly structured
+- [ ] No pending migration drift (CI checks automatically)
+- [ ] Security: no hardcoded secrets, inputs sanitized
+
+### Code Review Automation
+
+The following checks run automatically on every PR:
+
+- **Danger.js** (`ci-utils.yaml`) - PR analysis and automated comments
+- **ESLint** - Via `nx-affected` with `scope:frontend` and `scope:backend` tags
+- **TypeScript** - Type checking via `tsgo`
+- **Tests** - Unit and integration tests for affected packages
+- **Security** - CodeQL analysis and dependency vulnerability scanning
 
 ## Common Patterns
 
@@ -358,14 +472,18 @@ const result = processData(sanitizedInput);
 
 ## Important Files
 
-| File | Purpose |
-|------|---------|
-| `nx.json` | Nx workspace configuration and task definitions |
-| `tsconfig.base.json` | Base TypeScript configuration |
-| `eslint.config.mjs` | ESLint configuration (flat config) |
-| `package.json` | Root package with workspace definitions |
-| `.cursor/rules/` | Development guidelines and rules |
-| `CLAUDE.md` | Claude Code specific instructions |
+| File                            | Purpose                                         |
+| ------------------------------- | ----------------------------------------------- |
+| `nx.json`                       | Nx workspace configuration and task definitions |
+| `tsconfig.base.json`            | Base TypeScript configuration                   |
+| `eslint.config.mjs`             | Root ESLint flat config (ESLint 9)              |
+| `package.json`                  | Root package with workspace definitions         |
+| `.husky/pre-commit`             | Pre-commit hook (runs lint-staged)              |
+| `.github/workflows/`            | CI/CD pipeline (24 workflows)                   |
+| `.github/actions/`              | Custom reusable GitHub Actions                  |
+| `packages/twenty-eslint-rules/` | Custom ESLint rules (15+ rules)                 |
+| `.cursor/rules/`                | Development guidelines and rules                |
+| `CLAUDE.md`                     | Claude Code specific instructions               |
 
 ## Getting Help
 
