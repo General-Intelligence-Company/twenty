@@ -155,3 +155,263 @@ IMPORTANT: Use Context7 for code generation, setup or configuration steps, or li
 - `tsconfig.base.json` - Base TypeScript configuration
 - `package.json` - Root package with workspace definitions
 - `.cursor/rules/` - Development guidelines and best practices
+
+## CI/CD Pipeline Overview
+
+The repository uses GitHub Actions for continuous integration. All workflows are located in `.github/workflows/`.
+
+### CI Workflows
+
+| Workflow | File | Trigger | What It Checks |
+|----------|------|---------|----------------|
+| CI Front and E2E | `ci-front.yaml` | PR, merge_group | Frontend lint, typecheck, test, Storybook build/test, E2E tests |
+| CI Server | `ci-server.yaml` | PR, merge_group | Backend lint, typecheck, unit tests, integration tests, DB migrations |
+| CI Shared | `ci-shared.yaml` | PR, merge_group | Shared package lint, typecheck, tests |
+| CI SDK | `ci-sdk.yaml` | PR, merge_group | SDK lint, typecheck, unit tests |
+| CI Utils | `ci-utils.yaml` | PR (target) | Danger.js PR checks, congratulation messages |
+| CI Docs | `ci-docs.yaml` | PR, push to main | MDX documentation linting |
+| CI Website | `ci-website.yaml` | PR, merge_group | Website build validation |
+| CI Emails | `ci-emails.yaml` | PR, push to main | Email template build and server test |
+| CI Create App | `ci-create-app.yaml` | PR, push to main | create-twenty-app lint, typecheck, tests |
+| CI Docker Compose | `ci-test-docker-compose.yaml` | PR, merge_group | Docker compose build and startup test |
+| CI Breaking Changes | `ci-breaking-changes.yaml` | PR to main | GraphQL and OpenAPI breaking change detection |
+| CI Format | `ci-format.yaml` | PR, merge_group | Prettier format checking for frontend and backend |
+| Security Scan | `security.yaml` | PR, push to main, weekly | CodeQL analysis, dependency review |
+| Preview Env Dispatch | `preview-env-dispatch.yaml` | PR (labeled) | Triggers Render preview environment |
+
+### CD Workflows
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| CD Deploy Main | `cd-deploy-main.yaml` | Push to main | Deploy main branch to staging |
+| CD Deploy Tag | `cd-deploy-tag.yaml` | Tag `v*` | Deploy tagged releases to production |
+
+### Reusable Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Changed Files | `changed-files.yaml` | Detect changed files to skip unnecessary CI jobs |
+
+## Pre-commit Hooks
+
+The repository uses **Husky v9** with **lint-staged** for pre-commit hooks.
+
+### What Runs on Commit
+
+```bash
+# Configured in package.json under "lint-staged"
+*.{ts,tsx,js,jsx}  → eslint --fix && prettier --write
+*.{json,md,mdx,yml,yaml} → prettier --write
+```
+
+### Setup
+```bash
+# Husky is automatically set up after yarn install
+# To manually install hooks:
+npx husky install
+
+# Pre-commit hook location: .husky/pre-commit
+# Runs: npx lint-staged
+```
+
+## Pre-PR Checklist
+
+Before opening a PR, run these commands to ensure CI will pass:
+
+```bash
+# 1. Lint your changes (fastest - only changed files vs main)
+npx nx lint:diff-with-main twenty-front
+npx nx lint:diff-with-main twenty-server
+
+# 2. Type check
+npx nx typecheck twenty-front
+npx nx typecheck twenty-server
+
+# 3. Format check
+npx nx fmt twenty-front
+npx nx fmt twenty-server
+
+# 4. Run tests
+npx nx test twenty-front
+npx nx test twenty-server
+
+# 5. For backend changes, run integration tests
+npx nx run twenty-server:test:integration:with-db-reset
+```
+
+### Quick Commands
+```bash
+# Fix all linting issues automatically
+npx nx lint:diff-with-main twenty-front --configuration=fix
+npx nx lint:diff-with-main twenty-server --configuration=fix
+
+# Run all checks for a package
+npx nx run-many -t lint,typecheck,test -p twenty-front
+```
+
+## Custom ESLint Rules
+
+The repository includes 16 custom ESLint rules in `packages/twenty-eslint-rules/`. These enforce Twenty-specific coding standards.
+
+### Rule Categories
+
+**React & State Management:**
+| Rule | Purpose |
+|------|---------|
+| `component-props-naming` | Enforces consistent prop type naming (e.g., `ComponentNameProps`) |
+| `effect-components` | Ensures Effect components follow naming conventions |
+| `matching-state-variable` | Enforces state variable names match their Recoil atom names |
+| `no-state-useref` | Prevents using useRef for state that should use useState |
+| `use-getLoadable-and-getValue-to-get-atoms` | Enforces correct Recoil atom access patterns |
+| `useRecoilCallback-has-dependency-array` | Ensures useRecoilCallback has proper dependencies |
+
+**Styling & UI:**
+| Rule | Purpose |
+|------|---------|
+| `no-hardcoded-colors` | Prevents hardcoded colors; use theme variables |
+| `sort-css-properties-alphabetically` | Enforces alphabetical CSS property ordering |
+| `styled-components-prefixed-with-styled` | Requires `Styled` prefix for styled components |
+
+**Code Quality:**
+| Rule | Purpose |
+|------|---------|
+| `explicit-boolean-predicates-in-if` | Requires explicit boolean checks in if statements |
+| `max-consts-per-file` | Limits constants per file for maintainability |
+| `no-navigate-prefer-link` | Prefers `<Link>` over `useNavigate` for navigation |
+
+**Security & Backend:**
+| Rule | Purpose |
+|------|---------|
+| `graphql-resolvers-should-be-guarded` | Ensures GraphQL resolvers have auth guards |
+| `rest-api-methods-should-be-guarded` | Ensures REST endpoints have auth guards |
+| `inject-workspace-repository` | Enforces proper repository injection patterns |
+
+**Documentation:**
+| Rule | Purpose |
+|------|---------|
+| `mdx-component-newlines` | Enforces proper newlines in MDX components |
+| `no-angle-bracket-placeholders` | Prevents `<placeholder>` patterns in docs |
+
+## Testing Guide
+
+### Unit Tests
+
+**Frontend (Jest with jsdom)**
+```bash
+# Run all frontend tests
+npx nx test twenty-front
+
+# Run specific test file
+npx jest path/to/file.test.ts --config=packages/twenty-front/jest.config.mjs
+
+# Run with coverage
+npx nx test twenty-front --coverage
+```
+
+**Backend (Jest with node)**
+```bash
+# Run all backend tests
+npx nx test twenty-server
+
+# Run specific test file
+npx jest path/to/file.spec.ts --config=packages/twenty-server/jest.config.mjs
+```
+
+### Integration Tests
+
+```bash
+# Run integration tests with database reset
+npx nx run twenty-server:test:integration:with-db-reset
+
+# Run specific integration test shard (used in CI)
+npx nx run twenty-server:test:integration:with-db-reset --shard=1/8
+```
+
+### E2E Tests (Playwright)
+
+```bash
+# Install Playwright browsers
+npx nx setup twenty-e2e-testing
+
+# Run E2E tests
+npx nx test twenty-e2e-testing
+
+# E2E tests require running frontend and backend servers
+# See ci-front.yaml for the full setup
+```
+
+### Storybook Tests
+
+```bash
+# Build Storybook
+npx nx storybook:build twenty-front
+
+# Run Storybook tests (requires built Storybook)
+npx nx storybook:test twenty-front
+
+# Run with coverage
+npx nx storybook:coverage twenty-front --checkCoverage=true
+
+# Run specific scope
+npx nx storybook:test twenty-front --configuration=modules
+npx nx storybook:test twenty-front --configuration=pages
+npx nx storybook:test twenty-front --configuration=performance
+```
+
+### Test File Conventions
+- **Frontend**: `*.test.ts` or `*.test.tsx`
+- **Backend**: `*.spec.ts`
+- **E2E**: Located in `packages/twenty-e2e-testing/`
+
+## Deployment Architecture
+
+### Render Services
+
+The production deployment uses Render with the following services:
+
+| Service | Type | Purpose |
+|---------|------|---------|
+| `twenty-server` | Web Service | NestJS API server (GraphQL + REST) |
+| `twenty-worker` | Background Worker | BullMQ job processor |
+| `twenty-redis` | Redis | Caching, sessions, job queue |
+| `twenty-postgres` | PostgreSQL | Primary database |
+
+### Docker Deployment
+
+For self-hosted deployments, use the Docker setup:
+
+```bash
+# Using docker-compose
+cd packages/twenty-docker
+cp .env.example .env
+# Edit .env with your configuration
+docker compose up -d
+```
+
+**Docker Images:**
+- `twentycrm/twenty` - Main application image
+- `twentycrm/twenty-postgres-spilo` - PostgreSQL with extensions
+
+### Environment Variables
+
+Key environment variables for deployment:
+
+```bash
+# Database
+PG_DATABASE_URL=postgres://user:pass@host:5432/twenty
+
+# Redis
+REDIS_URL=redis://host:6379
+
+# Server
+NODE_PORT=3000
+APP_SECRET=your-secret-key
+
+# Optional: Analytics
+CLICKHOUSE_URL=http://host:8123/twenty
+ANALYTICS_ENABLED=true
+```
+
+### Preview Environments
+
+PRs labeled with `preview-app` trigger Render preview environments automatically via `preview-env-dispatch.yaml`.

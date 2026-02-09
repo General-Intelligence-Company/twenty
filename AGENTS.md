@@ -373,3 +373,203 @@ const result = processData(sanitizedInput);
 - Review `.cursor/rules/` for specific guidelines
 - Run `npx nx graph` to visualize package dependencies
 - Use `npx nx show project <package>` to see available targets
+
+## CI/CD Pipeline Overview
+
+The repository uses GitHub Actions with optimized workflows that skip jobs when relevant files haven't changed.
+
+### Automated Checks Table
+
+| Check | Workflow | Runs On | Required for Merge |
+|-------|----------|---------|-------------------|
+| Frontend Lint | `ci-front.yaml` | PR, merge_group | Yes |
+| Frontend Typecheck | `ci-front.yaml` | PR, merge_group | Yes |
+| Frontend Tests | `ci-front.yaml` | PR, merge_group | Yes |
+| Storybook Build | `ci-front.yaml` | PR, merge_group | Yes |
+| Storybook Tests | `ci-front.yaml` | PR, merge_group | Yes |
+| Backend Lint | `ci-server.yaml` | PR, merge_group | Yes |
+| Backend Typecheck | `ci-server.yaml` | PR, merge_group | Yes |
+| Backend Unit Tests | `ci-server.yaml` | PR, merge_group | Yes |
+| Backend Integration Tests | `ci-server.yaml` | PR, merge_group | Yes |
+| E2E Tests | `ci-front.yaml` | PR with `run-e2e` label | No (manual) |
+| Format Check | `ci-format.yaml` | PR, merge_group | Yes |
+| Security Scan | `security.yaml` | PR, push, weekly | Yes |
+| Breaking Changes | `ci-breaking-changes.yaml` | PR to main | Informational |
+| Docker Compose | `ci-test-docker-compose.yaml` | PR, merge_group | Yes |
+
+### Skip Detection
+
+All CI workflows use `.github/workflows/changed-files.yaml` to skip jobs when:
+- Only documentation changed (for code workflows)
+- Only unrelated packages changed
+- Only test files changed (for non-test workflows)
+
+## Custom ESLint Rules
+
+The 8 most impactful custom rules in `packages/twenty-eslint-rules/`:
+
+| Rule | Severity | Purpose |
+|------|----------|---------|
+| `graphql-resolvers-should-be-guarded` | Error | **Security**: All GraphQL resolvers must have authentication guards |
+| `rest-api-methods-should-be-guarded` | Error | **Security**: All REST endpoints must have authentication guards |
+| `no-hardcoded-colors` | Error | **Consistency**: Use theme variables, not hex/rgb values |
+| `styled-components-prefixed-with-styled` | Error | **Convention**: Styled components must start with `Styled` prefix |
+| `component-props-naming` | Error | **Convention**: Props types must be named `ComponentNameProps` |
+| `matching-state-variable` | Warning | **Readability**: State variable names should match atom names |
+| `useRecoilCallback-has-dependency-array` | Error | **Correctness**: Prevents stale closure bugs in Recoil callbacks |
+| `no-navigate-prefer-link` | Warning | **UX**: Prefer `<Link>` for better accessibility and SEO |
+
+## Code Review Checklist
+
+### Code Quality
+- [ ] No `any` types (use `unknown` with type guards)
+- [ ] Named exports only (no default exports)
+- [ ] Types over interfaces (unless extending third-party)
+- [ ] Functional components only (no class components)
+- [ ] Event handlers over useEffect for user-triggered state changes
+
+### Security
+- [ ] GraphQL resolvers have `@UseGuards()` decorators
+- [ ] REST endpoints have authentication guards
+- [ ] User input is sanitized before processing
+- [ ] No hardcoded secrets or credentials
+- [ ] Database queries use parameterized inputs
+
+### Testing
+- [ ] New features have corresponding tests
+- [ ] Tests follow AAA pattern (Arrange-Act-Assert)
+- [ ] UI components have Storybook stories
+- [ ] Integration tests cover critical paths
+- [ ] No `test.skip` or `it.skip` without TODO comment
+
+### CI Compliance
+- [ ] `npx nx lint:diff-with-main <package>` passes
+- [ ] `npx nx typecheck <package>` passes
+- [ ] `npx nx fmt <package>` shows no changes needed
+- [ ] `npx nx test <package>` passes
+- [ ] No new ESLint rule violations
+
+### Database & API
+- [ ] Migrations are reversible when possible
+- [ ] GraphQL schema changes are backward compatible
+- [ ] REST API changes documented in OpenAPI
+- [ ] No N+1 query patterns in resolvers
+
+## Preview Environment
+
+### How It Works
+
+1. **Trigger**: Add the `preview-app` label to a PR
+2. **Dispatch**: `preview-env-dispatch.yaml` triggers Render deployment
+3. **Build**: Render builds a preview environment with PR changes
+4. **URL**: Preview URL is posted as a PR comment
+5. **Lifecycle**: Preview environments are automatically cleaned up when PR closes
+
+### What Gets Deployed
+- Frontend (`twenty-front`) at the preview URL
+- Backend (`twenty-server`) with isolated database
+- Worker (`twenty-server:worker`) for background jobs
+
+### Testing Preview Environments
+```bash
+# Preview URL format
+https://twenty-pr-{PR_NUMBER}.onrender.com
+
+# Test the frontend
+curl https://twenty-pr-123.onrender.com
+
+# Test the API
+curl https://twenty-pr-123.onrender.com/healthz
+```
+
+## Coding Standards
+
+### TypeScript Best Practices
+
+```typescript
+// Use discriminated unions for state
+type LoadingState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: User }
+  | { status: 'error'; error: Error };
+
+// Use const assertions for literal types
+const ROLES = ['admin', 'user', 'guest'] as const;
+type Role = typeof ROLES[number];
+
+// Prefer nullish coalescing over OR
+const value = input ?? defaultValue;  // Correct
+const value = input || defaultValue;  // Avoid (treats '' and 0 as falsy)
+
+// Use satisfies for type checking without widening
+const config = {
+  apiUrl: 'https://api.example.com',
+  timeout: 5000,
+} satisfies Config;
+```
+
+### Import Patterns (Nx Module Boundaries)
+
+```typescript
+// Correct: Use path aliases defined in tsconfig
+import { UserService } from 'src/modules/user/user.service';
+import { isDefined } from 'twenty-shared/utils';
+import { Button } from '@/components/ui';
+
+// Incorrect: Cross-scope imports
+import { serverUtil } from 'twenty-server/utils';  // Frontend can't import backend
+
+// Module boundary rules:
+// scope:frontend → scope:frontend, scope:shared
+// scope:backend  → scope:backend, scope:shared
+// scope:shared   → scope:shared only
+```
+
+### Naming Conventions
+
+```typescript
+// Files and directories: kebab-case
+// user-profile.component.tsx
+// use-user-data.hook.ts
+// user.service.ts
+
+// Components: PascalCase
+export const UserProfile = () => { ... };
+
+// Hooks: camelCase with 'use' prefix
+export const useUserData = () => { ... };
+
+// Types: PascalCase
+type UserProfileProps = { ... };
+
+// Constants: SCREAMING_SNAKE_CASE
+const MAX_RETRY_COUNT = 3;
+const API_ENDPOINTS = { ... };
+
+// Styled components: PascalCase with 'Styled' prefix
+const StyledUserCard = styled.div`...`;
+```
+
+### State Management Patterns
+
+```typescript
+// Recoil atoms: use State suffix
+export const currentUserState = atom<User | null>({
+  key: 'currentUserState',
+  default: null,
+});
+
+// Recoil selectors: use Selector suffix
+export const currentUserNameSelector = selector({
+  key: 'currentUserNameSelector',
+  get: ({ get }) => get(currentUserState)?.name,
+});
+
+// Access atoms correctly in callbacks
+const handleAction = useRecoilCallback(({ snapshot }) => async () => {
+  // Use getLoadable for sync access
+  const user = snapshot.getLoadable(currentUserState).getValue();
+  // NOT: const user = get(currentUserState);
+}, []);
+```

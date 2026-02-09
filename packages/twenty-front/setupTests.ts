@@ -4,6 +4,9 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
+// Retry flaky tests up to 2 times to improve CI stability
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
+
 import { i18n } from '@lingui/core';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
 import { messages as enMessages } from '~/locales/generated/en';

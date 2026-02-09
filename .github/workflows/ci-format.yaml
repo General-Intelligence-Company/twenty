@@ -1,0 +1,80 @@
+name: CI Format
+
+on:
+  merge_group:
+
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  changed-files-check:
+    uses: ./.github/workflows/changed-files.yaml
+    with:
+      files: |
+        package.json
+        yarn.lock
+        packages/twenty-front/**
+        packages/twenty-server/**
+        packages/twenty-ui/**
+        packages/twenty-shared/**
+        packages/twenty-emails/**
+
+  format-frontend:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.any_changed == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+      - name: Fetch custom Github Actions and base branch history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        uses: ./.github/actions/yarn-install
+      - name: Run format check on frontend packages
+        uses: ./.github/actions/nx-affected
+        with:
+          tag: scope:frontend
+          tasks: fmt
+
+  format-backend:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.any_changed == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+      - name: Fetch custom Github Actions and base branch history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        uses: ./.github/actions/yarn-install
+      - name: Run format check on backend packages
+        uses: ./.github/actions/nx-affected
+        with:
+          tag: scope:backend
+          tasks: fmt
+
+  ci-format-status-check:
+    if: always() && !cancelled()
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    needs: [changed-files-check, format-frontend, format-backend]
+    steps:
+      - name: Fail job if any needs failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
