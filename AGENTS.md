@@ -8,14 +8,14 @@ Twenty is an open-source CRM (Customer Relationship Management) platform built a
 
 ### Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
+| Layer    | Technology                                  |
+| -------- | ------------------------------------------- |
 | Frontend | React 18, TypeScript, Recoil, Emotion, Vite |
-| Backend | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
-| Caching | Redis |
-| Queue | BullMQ |
-| Testing | Jest, Playwright, Storybook |
-| Monorepo | Nx workspace with Yarn 4 |
+| Backend  | NestJS, TypeORM, GraphQL (Yoga), PostgreSQL |
+| Caching  | Redis                                       |
+| Queue    | BullMQ                                      |
+| Testing  | Jest, Playwright, Storybook                 |
+| Monorepo | Nx workspace with Yarn 4                    |
 
 ### Package Structure
 
@@ -70,13 +70,13 @@ export default UserCard;              // Use named export
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| Variables/Functions | camelCase | `userAccountBalance`, `calculateTotal` |
-| Constants | SCREAMING_SNAKE_CASE | `API_ENDPOINTS`, `MAX_RETRY_COUNT` |
-| Types/Classes | PascalCase | `UserService`, `ButtonProps` |
-| Files/Directories | kebab-case | `user-profile.component.tsx` |
-| Component Props | PascalCase + Props suffix | `UserCardProps` |
+| Element             | Convention                | Example                                |
+| ------------------- | ------------------------- | -------------------------------------- |
+| Variables/Functions | camelCase                 | `userAccountBalance`, `calculateTotal` |
+| Constants           | SCREAMING_SNAKE_CASE      | `API_ENDPOINTS`, `MAX_RETRY_COUNT`     |
+| Types/Classes       | PascalCase                | `UserService`, `ButtonProps`           |
+| Files/Directories   | kebab-case                | `user-profile.component.tsx`           |
+| Component Props     | PascalCase + Props suffix | `UserCardProps`                        |
 
 ### React Guidelines
 
@@ -358,14 +358,89 @@ const result = processData(sanitizedInput);
 
 ## Important Files
 
-| File | Purpose |
-|------|---------|
-| `nx.json` | Nx workspace configuration and task definitions |
-| `tsconfig.base.json` | Base TypeScript configuration |
-| `eslint.config.mjs` | ESLint configuration (flat config) |
-| `package.json` | Root package with workspace definitions |
-| `.cursor/rules/` | Development guidelines and rules |
-| `CLAUDE.md` | Claude Code specific instructions |
+| File                 | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| `nx.json`            | Nx workspace configuration and task definitions |
+| `tsconfig.base.json` | Base TypeScript configuration                   |
+| `eslint.config.mjs`  | ESLint configuration (flat config)              |
+| `package.json`       | Root package with workspace definitions         |
+| `.cursor/rules/`     | Development guidelines and rules                |
+| `CLAUDE.md`          | Claude Code specific instructions               |
+
+## CI/CD Pipeline Overview
+
+### Automated Checks on Every PR
+
+All checks must pass before a PR can be merged. The following workflows run automatically:
+
+| Check                 | What it validates                           | Key command                                               |
+| --------------------- | ------------------------------------------- | --------------------------------------------------------- |
+| **ESLint**            | Code style, best practices, security guards | `npx nx lint <package>`                                   |
+| **TypeScript**        | Type safety via `tsgo`                      | `npx nx typecheck <package>`                              |
+| **Prettier**          | Code formatting consistency                 | `npx nx fmt <package>`                                    |
+| **Unit Tests**        | Frontend (Jest) and backend (Jest)          | `npx nx test <package>`                                   |
+| **Integration Tests** | Backend with Postgres/Redis/ClickHouse      | `npx nx run twenty-server:test:integration:with-db-reset` |
+| **Storybook Tests**   | Visual component tests (sharded)            | `npx nx storybook:test twenty-front`                      |
+| **E2E Tests**         | End-to-end with Playwright                  | `npx nx run twenty-e2e-testing:test`                      |
+| **Build**             | Frontend and backend compilation            | `npx nx build <package>`                                  |
+| **Breaking Changes**  | GraphQL and OpenAPI schema compatibility    | Automated diff detection                                  |
+| **Security**          | CodeQL analysis + dependency review         | Automated on PRs                                          |
+
+### Pre-commit Hooks
+
+Husky + lint-staged automatically runs on every commit:
+
+- **TypeScript/JavaScript files** (`*.{ts,tsx,js,jsx}`): `eslint --fix` → `prettier --write`
+- **Data/doc files** (`*.{json,md,mdx,yml,yaml}`): `prettier --write`
+
+### Custom ESLint Rules
+
+The project has 16 custom ESLint rules in `packages/twenty-eslint-rules/`:
+
+- `graphql-resolvers-should-be-guarded` — Security: GraphQL resolvers must have auth guards
+- `rest-api-methods-should-be-guarded` — Security: REST endpoints must have auth guards
+- `inject-workspace-repository` — Workspace repository injection patterns
+- `no-hardcoded-colors` — Enforces use of theme tokens over hardcoded colors
+- `matching-state-variable` — Recoil state variable naming consistency
+- `styled-components-prefixed-with-styled` — Styled component naming convention
+- `sort-css-properties-alphabetically` — CSS property ordering
+- `component-props-naming` — Component prop type naming conventions
+
+## Code Review Checklist
+
+When reviewing or submitting code, verify:
+
+### Code Quality
+
+- [ ] No `any` types — use proper typing or `unknown` with type guards
+- [ ] Named exports only (no `export default`)
+- [ ] Types used instead of interfaces (unless extending third-party)
+- [ ] String literals used instead of enums (unless GraphQL enums)
+- [ ] Short-form comments (`//`) explaining "why", not "what"
+- [ ] No hardcoded colors — use theme tokens
+
+### Security
+
+- [ ] GraphQL resolvers have proper auth guards
+- [ ] REST API endpoints have proper auth guards
+- [ ] User input is sanitized before processing
+- [ ] No secrets or credentials in committed code
+
+### Testing
+
+- [ ] New functionality has corresponding tests
+- [ ] UI components have Storybook stories
+- [ ] Tests follow AAA pattern (Arrange, Act, Assert)
+- [ ] Tests verify behavior, not implementation details
+
+### CI Compliance
+
+- [ ] `npx nx lint:diff-with-main <package>` passes
+- [ ] `npx nx typecheck <package>` passes
+- [ ] `npx nx fmt <package>` passes
+- [ ] `npx nx test <package>` passes
+- [ ] GraphQL schema changes are backward compatible
+- [ ] Database migrations are properly structured
 
 ## Getting Help
 
