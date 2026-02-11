@@ -1,0 +1,39 @@
+# Default owner
+* @General-Intelligence-Company/twenty-team
+
+# Frontend
+/packages/twenty-front/ @General-Intelligence-Company/twenty-team
+/packages/twenty-ui/ @General-Intelligence-Company/twenty-team
+/packages/twenty-emails/ @General-Intelligence-Company/twenty-team
+
+# Backend
+/packages/twenty-server/ @General-Intelligence-Company/twenty-team
+
+# Shared
+/packages/twenty-shared/ @General-Intelligence-Company/twenty-team
+/packages/twenty-utils/ @General-Intelligence-Company/twenty-team
+
+# SDK & CLI
+/packages/twenty-sdk/ @General-Intelligence-Company/twenty-team
+/packages/twenty-cli/ @General-Intelligence-Company/twenty-team
+/packages/create-twenty-app/ @General-Intelligence-Company/twenty-team
+
+# Documentation
+/packages/twenty-docs/ @General-Intelligence-Company/twenty-team
+/packages/twenty-website/ @General-Intelligence-Company/twenty-team
+
+# Integrations
+/packages/twenty-zapier/ @General-Intelligence-Company/twenty-team
+/packages/twenty-apps/ @General-Intelligence-Company/twenty-team
+
+# Testing
+/packages/twenty-e2e-testing/ @General-Intelligence-Company/twenty-team
+
+# Infrastructure
+/packages/twenty-docker/ @General-Intelligence-Company/twenty-team
+
+# CI/CD
+/.github/ @General-Intelligence-Company/twenty-team
+
+# ESLint Rules
+/packages/twenty-eslint-rules/ @General-Intelligence-Company/twenty-team

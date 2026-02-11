@@ -373,3 +373,51 @@ const result = processData(sanitizedInput);
 - Review `.cursor/rules/` for specific guidelines
 - Run `npx nx graph` to visualize package dependencies
 - Use `npx nx show project <package>` to see available targets
+
+## Branch Protection Rules
+
+The `main` branch has strict protection rules that must be satisfied before merging:
+
+### Required CI Status Checks
+
+All of the following checks must pass:
+
+| Check | Description |
+|-------|-------------|
+| `ci-front-status-check` | Frontend linting, type checking, and tests |
+| `ci-server-status-check` | Backend linting, type checking, and tests |
+| `ci-shared-status-check` | Shared packages validation |
+| `ci-format-status-check` | Code formatting with Prettier |
+| `ci-emails-status-check` | Email templates validation |
+| `ci-create-app-status-check` | Create app scaffolding tests |
+| `Cursor Bugbot` | Automated code review for common issues |
+
+### Code Review Requirements
+
+- **All conversations must be resolved** - Every comment thread on a PR must be marked as resolved before the merge button becomes available
+- **Approvals required** - PRs require review approval from code owners
+- **CODEOWNERS enforcement** - Changes to specific packages require approval from designated team members
+
+## Preview Environment Testing
+
+Pull requests automatically trigger Render preview deployments:
+
+### Available Preview Services
+
+- **twenty-server** - Full backend API deployment for testing API changes
+- **twenty-worker** - Background job worker for testing async processing
+
+### Using Preview Environments
+
+1. Open a PR with your changes
+2. Wait for the Render preview deployment to complete (check PR status)
+3. Access the preview URL provided in the PR comments
+4. Test your changes in the isolated environment
+5. Preview environments are automatically cleaned up when the PR is closed
+
+### Best Practices for Preview Testing
+
+- Test API endpoints directly in the preview environment
+- Verify database migrations work correctly
+- Check background job processing with the worker preview
+- Use preview URLs for integration testing before merge

@@ -155,3 +155,26 @@ IMPORTANT: Use Context7 for code generation, setup or configuration steps, or li
 - `tsconfig.base.json` - Base TypeScript configuration
 - `package.json` - Root package with workspace definitions
 - `.cursor/rules/` - Development guidelines and best practices
+
+## Branch Protection
+
+The `main` branch is protected and requires the following status checks to pass before merging:
+
+- `ci-front-status-check` - Frontend CI checks
+- `ci-server-status-check` - Server CI checks
+- `ci-shared-status-check` - Shared package CI checks
+- `ci-format-status-check` - Code formatting checks
+- `ci-emails-status-check` - Email templates CI checks
+- `ci-create-app-status-check` - Create app CI checks
+- `Cursor Bugbot` - Automated code review
+
+**Required conversation resolution** is enabled - all PR review conversations must be resolved before merging.
+
+## Preview Environments
+
+Render preview environments are configured for automatic deployment on pull requests:
+
+- **twenty-server** - Backend API preview deployment
+- **twenty-worker** - Background worker preview deployment
+
+Preview environments are automatically created when a PR is opened and destroyed when the PR is closed or merged. Use these previews to test backend changes in isolation before merging.
