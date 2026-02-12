@@ -22,7 +22,6 @@ COPY ./packages/twenty-shared/package.json /app/packages/twenty-shared/
 COPY ./packages/twenty-front/package.json /app/packages/twenty-front/
 COPY ./packages/twenty-utils/package.json /app/packages/twenty-utils/
 COPY ./packages/twenty-sdk/package.json /app/packages/twenty-sdk/
-COPY ./packages/twenty-eslint-rules/package.json /app/packages/twenty-eslint-rules/
 
 RUN yarn && yarn cache clean && npx nx reset
 
