@@ -49,3 +49,11 @@ dump.rdb
 mcp.json
 /.junie/
 TRANSLATION_QA_REPORT.md
+
+# Security - private keys and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/

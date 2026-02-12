@@ -43,7 +43,7 @@ packages/
 ### TypeScript Standards
 
 - **Strict mode enabled** - No implicit any, strict null checks
-- **No `any` type** - Use proper typing or `unknown` with type guards
+- **Avoid `any` type** - Use proper typing or `unknown` with type guards. Note: `@typescript-eslint/no-explicit-any` is currently turned OFF in ESLint config, but best practice is to minimize `any` usage
 - **Types over interfaces** - Exception: extending third-party interfaces
 - **String literals over enums** - Exception: GraphQL enums
 - **Named exports only** - No default exports anywhere
@@ -355,6 +355,25 @@ const safeValue = formatValueForCSV(sanitizeValueForCSVExport(userInput));
 const sanitizedInput = validateAndSanitize(userInput);
 const result = processData(sanitizedInput);
 ```
+
+## Deployment & Preview Environments
+
+### Render Services
+| Service | Type | Description |
+|---------|------|-------------|
+| `twenty-server` | Web Service (Docker) | NestJS backend API on port 3000 |
+| `twenty-worker` | Background Worker (Docker) | BullMQ job processor |
+| `twenty-redis` | Private Service | Redis cache |
+| `twenty-postgres` | Private Service | PostgreSQL database |
+
+### Preview Environments
+- **Automatic** preview deployments are enabled for `twenty-server` and `twenty-worker`
+- Preview URLs: `https://{service-name}-pr-{pr-number}.onrender.com`
+- Private services (Redis, PostgreSQL) are shared between previews and production
+- Preview environments use the same Dockerfile and build configuration as production
+
+### Production URL
+- Backend: https://twenty-server-8x55.onrender.com
 
 ## Important Files
 

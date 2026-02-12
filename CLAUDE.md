@@ -107,7 +107,7 @@ packages/
 - **Named exports only** (no default exports)
 - **Types over interfaces** (except when extending third-party interfaces)
 - **String literals over enums** (except for GraphQL enums)
-- **No 'any' type allowed**
+- **Avoid 'any' type** - Prefer proper typing or 'unknown' with type guards (note: @typescript-eslint/no-explicit-any is currently a warning, not an error)
 - **Event handlers preferred over useEffect** for state updates
 
 ### State Management
@@ -149,6 +149,21 @@ IMPORTANT: Use Context7 for code generation, setup or configuration steps, or li
 - **Integration tests** for critical backend workflows
 - **Storybook** for component development and testing
 - **E2E tests** with Playwright for critical user flows
+
+## Preview Environments
+
+This project uses **Render** for deployment with automatic preview environments.
+
+### Services
+- **twenty-server** - NestJS backend API (Docker, port 3000)
+- **twenty-worker** - Background job worker (Docker)
+- **twenty-redis** - Redis cache (private service)
+- **twenty-postgres** - PostgreSQL database (private service)
+
+### Preview Environment Behavior
+- Preview environments are automatically created for PRs on `twenty-server` and `twenty-worker`
+- Preview URLs follow the pattern: `https://{service-name}-pr-{pr-number}.onrender.com`
+- Private services (Redis, PostgreSQL) are not duplicated in previews
 
 ## Important Files
 - `nx.json` - Nx workspace configuration with task definitions
