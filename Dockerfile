@@ -1,26 +1,36 @@
 # Server-only Dockerfile for Render preview environments
-# This builds only the twenty-server without the frontend to reduce build time and memory usage
+# Based on packages/twenty-docker/twenty/Dockerfile but skips the frontend build
+# to reduce build time and memory usage on Render's standard plan.
 
-# Base image for common dependencies
+###############################################
+# Base: install dependencies
+###############################################
 FROM node:24-alpine AS common-deps
 
 WORKDIR /app
 
-# Copy only the necessary files for dependency resolution
+# Copy dependency files
 COPY ./package.json ./yarn.lock ./.yarnrc.yml ./tsconfig.base.json ./nx.json /app/
 COPY ./.yarn/releases /app/.yarn/releases
 COPY ./.yarn/patches /app/.yarn/patches
 
+# Copy package.json files for dependency resolution
+# Note: We include twenty-front and twenty-ui package.json files even though we don't
+# build them, because yarn needs these for proper workspace dependency resolution
 COPY ./packages/twenty-emails/package.json /app/packages/twenty-emails/
 COPY ./packages/twenty-server/package.json /app/packages/twenty-server/
 COPY ./packages/twenty-server/patches /app/packages/twenty-server/patches
 COPY ./packages/twenty-shared/package.json /app/packages/twenty-shared/
+COPY ./packages/twenty-ui/package.json /app/packages/twenty-ui/
+COPY ./packages/twenty-front/package.json /app/packages/twenty-front/
 
-# Install dependencies (skip frontend packages)
+# Install all dependencies
 RUN yarn && yarn cache clean && npx nx reset
 
 
-# Build the server
+###############################################
+# Build: server only
+###############################################
 FROM common-deps AS twenty-server-build
 
 # Copy source code after installing dependencies to accelerate subsequent builds
@@ -33,35 +43,44 @@ RUN npx nx run twenty-server:build
 RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-server
 
 
-# Final stage: Run the server
+###############################################
+# Runtime
+###############################################
 FROM node:24-alpine AS twenty-server
-
-# Used to run healthcheck in docker
-RUN apk add --no-cache curl jq
-
-RUN npm install -g tsx
-
-RUN apk add --no-cache postgresql-client
 
 WORKDIR /app/packages/twenty-server
 
-ARG APP_VERSION
-ENV APP_VERSION=$APP_VERSION
+# Install runtime dependencies
+RUN apk add --no-cache postgresql-client curl jq
 
-# Copy built server from previous stage
+# Install tsx globally for scripts
+RUN npm install -g tsx
+
+# Copy server build from previous stage
 COPY --chown=1000 --from=twenty-server-build /app /app
+
+# Copy entrypoint script for database migrations
+COPY ./packages/twenty-docker/twenty/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Set metadata and labels
 LABEL org.opencontainers.image.source=https://github.com/twentyhq/twenty
 LABEL org.opencontainers.image.description="Twenty CRM server-only image for Render preview environments"
 
+# Create local storage directories
 RUN mkdir -p /app/.local-storage /app/packages/twenty-server/.local-storage && \
     chown -R 1000:1000 /app
 
-# Use non root user with uid 1000
+# Set environment defaults
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
+ENV NODE_ENV=production
+
+# Use non-root user with uid 1000
 USER 1000
 
 # Expose the default NestJS port
 EXPOSE 3000
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["node", "dist/main"]
