@@ -107,6 +107,9 @@ export default [
           argsIgnorePattern: '^_',
         },
       ],
+
+      // Cyclomatic complexity
+      'complexity': ['warn', { max: 20 }],
     },
   },
 

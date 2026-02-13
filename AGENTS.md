@@ -367,6 +367,74 @@ const result = processData(sanitizedInput);
 | `.cursor/rules/` | Development guidelines and rules |
 | `CLAUDE.md` | Claude Code specific instructions |
 
+## Deployment & Preview Environments
+
+### Render Services
+
+| Service | Type | Description |
+|---------|------|-------------|
+| twenty-server | Web Service | Backend API server (GraphQL + REST) |
+| twenty-worker | Background Worker | BullMQ job processor |
+| twenty-redis | Private Service | Redis for caching and sessions |
+| twenty-postgres | Private Service | PostgreSQL database |
+
+### Preview Environment Behavior
+
+- **Auto-creation**: Preview environments are automatically created when a PR is opened
+- **Auto-destruction**: Preview environments are automatically destroyed when PR is merged or closed
+- **Preview URL pattern**: `https://twenty-server-pr-{N}.onrender.com` (where N is the PR number)
+- **Production URL**: `https://twenty-server-8x55.onrender.com`
+
+### Testing Preview Environments
+
+1. Open a PR and wait for the Render deployment to complete
+2. Access the preview URL using the PR number
+3. Test your changes in an isolated environment
+4. Preview environments share the same schema but have isolated data
+
+## CI/CD Pipeline
+
+### Required Status Checks
+
+All PRs must pass these status checks before merging:
+
+| Check | Description |
+|-------|-------------|
+| `ci-front-status-check` | Frontend linting, type checking, and tests |
+| `ci-server-status-check` | Backend linting, type checking, and tests |
+| `ci-shared-status-check` | Shared packages validation |
+| `ci-format-status-check` | Prettier formatting validation |
+| `ci-emails-status-check` | Email templates validation |
+| `ci-create-app-status-check` | Create app scaffolding validation |
+| `Cursor Bugbot` | Automated AI code review |
+
+### Branch Protection Rules
+
+- **Required conversations resolution**: All review comments must be resolved
+- **Strict status checks**: Branch must be up to date with base branch before merging
+- **Linear history**: Encouraged through squash merging
+
+## Code Quality Rules
+
+### Cyclomatic Complexity
+
+The project enforces cyclomatic complexity limits to maintain code readability:
+
+```javascript
+'complexity': ['warn', { max: 20 }]
+```
+
+- **Max complexity**: 20 (set higher for large existing codebase)
+- **Level**: Warning (does not block CI, but should be addressed)
+- **Guidance**: Functions exceeding this threshold should be refactored into smaller, focused functions
+
+### Custom ESLint Rules
+
+The `twenty-eslint-rules` package provides custom rules:
+
+- `twenty/mdx-component-newlines`: Enforces JSX tags on separate lines in MDX files
+- `twenty/no-angle-bracket-placeholders`: Prevents angle bracket placeholders that cause translation issues
+
 ## Getting Help
 
 - Check existing code patterns in similar files

@@ -155,3 +155,34 @@ IMPORTANT: Use Context7 for code generation, setup or configuration steps, or li
 - `tsconfig.base.json` - Base TypeScript configuration
 - `package.json` - Root package with workspace definitions
 - `.cursor/rules/` - Development guidelines and best practices
+
+## Preview Environments
+
+The project uses Render for deployment with automatic preview environments for pull requests.
+
+### Render Services
+- **twenty-server**: Web service for the backend API
+- **twenty-worker**: Background worker for job processing
+
+### Preview URLs
+- **Production**: `https://twenty-server-8x55.onrender.com`
+- **PR Previews**: `https://twenty-server-pr-{N}.onrender.com` (where N is the PR number)
+
+Preview environments are automatically created when a new PR is opened and destroyed when the PR is merged or closed.
+
+## Branch Protection
+
+The `main` branch has the following protection rules:
+
+### Required Status Checks
+- `ci-front-status-check` - Frontend CI validation
+- `ci-server-status-check` - Backend CI validation
+- `ci-shared-status-check` - Shared packages CI validation
+- `ci-format-status-check` - Code formatting validation
+- `ci-emails-status-check` - Email templates CI validation
+- `ci-create-app-status-check` - Create app package CI validation
+- `Cursor Bugbot` - Automated code review
+
+### Additional Requirements
+- All conversations must be resolved before merging
+- Branch must be up to date with the base branch (strict status checks)
